@@ -1,8 +1,3 @@
-//Include and link appropriate libraries and headers//
-#pragma comment(lib, "d3d11.lib")
-#pragma comment(lib, "d3dx11.lib")
-#pragma comment(lib, "d3dx10.lib")
-
 #include <windows.h>
 #include <d3d11.h>
 #include <d3dx11.h>
@@ -122,10 +117,10 @@ bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, int width, int height, b
 
 bool InitializeDirect3d11App(HINSTANCE hInstance)
 {
-	//Describe our Buffer
-	DXGI_MODE_DESC bufferDesc;
+	HRESULT hr;
 
-	ZeroMemory(&bufferDesc, sizeof(DXGI_MODE_DESC));
+	//Describe our Buffer
+	DXGI_MODE_DESC bufferDesc = { 0 };
 
 	bufferDesc.Width = Width;
 	bufferDesc.Height = Height;
@@ -136,9 +131,7 @@ bool InitializeDirect3d11App(HINSTANCE hInstance)
 	bufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 
 	//Describe our SwapChain
-	DXGI_SWAP_CHAIN_DESC swapChainDesc;
-
-	ZeroMemory(&swapChainDesc, sizeof(DXGI_SWAP_CHAIN_DESC));
+	DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
 
 	swapChainDesc.BufferDesc = bufferDesc;
 	swapChainDesc.SampleDesc.Count = 1;
@@ -146,21 +139,34 @@ bool InitializeDirect3d11App(HINSTANCE hInstance)
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.BufferCount = 1;
 	swapChainDesc.OutputWindow = hwnd;
-	swapChainDesc.Windowed = TRUE;
+	swapChainDesc.Windowed = true;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
+	// Set the feature level to DirectX 11. Set NULL to use the highest features available
+	D3D_FEATURE_LEVEL featureLevels[] = 
+	{
+		D3D_FEATURE_LEVEL_11_0,
+		D3D_FEATURE_LEVEL_10_1,
+		D3D_FEATURE_LEVEL_10_0,
+		D3D_FEATURE_LEVEL_9_3,
+		D3D_FEATURE_LEVEL_9_2,
+		D3D_FEATURE_LEVEL_9_1,
+	};
 
-	//Create our SwapChain
-	D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, NULL, NULL, NULL,
-		D3D11_SDK_VERSION, &swapChainDesc, &SwapChain, &d3d11Device, NULL, &d3d11DevCon);
+	//Gets the max feature level supported
+	D3D_FEATURE_LEVEL maxFeatureLevel; //same as: d3d11Device->GetFeatureLevel();
+
+	//Create our SwapChain and Device
+	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, NULL, featureLevels, 6, D3D11_SDK_VERSION, &swapChainDesc, &SwapChain, &d3d11Device, &maxFeatureLevel, &d3d11DevCon);
 
 	//Create our BackBuffer
 	ID3D11Texture2D* BackBuffer;
-	SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&BackBuffer);
+	hr = SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&BackBuffer);
 
 	//Create our Render Target
-	d3d11Device->CreateRenderTargetView(BackBuffer, NULL, &renderTargetView);
+	hr = d3d11Device->CreateRenderTargetView(BackBuffer, NULL, &renderTargetView);
 	BackBuffer->Release();
+
 
 	//Set our Render Target
 	d3d11DevCon->OMSetRenderTargets(1, &renderTargetView, NULL);
@@ -227,7 +233,9 @@ int messageloop()
 		}
 		else
 		{
-			//Otherewise, keep the flow going
+			//run game code
+			UpdateScene();
+			DrawScene();
 		}
 	}
 
