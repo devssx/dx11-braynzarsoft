@@ -208,8 +208,17 @@ void ReleaseObjects()
 bool InitScene()
 {
 	//Compile Shaders from shader file
-	HRESULT hr = D3DX11CompileFromFile(L"Shader.hlsl", 0, 0, "VS", "vs_5_0", 0, 0, 0, &VS_Buffer, 0, 0);
-	hr = D3DX11CompileFromFile(L"Shader.hlsl", 0, 0, "PS", "ps_5_0", 0, 0, 0, &PS_Buffer, 0, 0);
+	HRESULT hr;
+	if (d3d11Device->GetFeatureLevel() >= D3D_FEATURE_LEVEL_11_0)
+	{
+		hr = D3DX11CompileFromFile(L"Shader.hlsl", 0, 0, "VS", "vs_5_0", 0, 0, 0, &VS_Buffer, 0, 0);
+		hr = D3DX11CompileFromFile(L"Shader.hlsl", 0, 0, "PS", "ps_5_0", 0, 0, 0, &PS_Buffer, 0, 0);
+	}
+	else
+	{
+		hr = D3DX11CompileFromFile(L"Shader.hlsl", 0, 0, "VS", "vs_4_0", 0, 0, 0, &VS_Buffer, 0, 0);
+		hr = D3DX11CompileFromFile(L"Shader.hlsl", 0, 0, "PS", "ps_4_0", 0, 0, 0, &PS_Buffer, 0, 0);
+	}
 
 	//Create the Shader Objects
 	hr = d3d11Device->CreateVertexShader(VS_Buffer->GetBufferPointer(), VS_Buffer->GetBufferSize(), NULL, &VS);
