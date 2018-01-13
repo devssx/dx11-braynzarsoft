@@ -26,13 +26,15 @@ const int Height = 600;
 struct Vertex    //Overloaded Vertex Structure
 {
 	Vertex() {}
-	Vertex(float x, float y, float z) : pos(x, y, z) {}
+	Vertex(float x, float y, float z, float r, float g, float b, float a) : pos(x, y, z), color(r, g, b, a) {}
 	XMFLOAT3 pos;
+	XMFLOAT4 color;
 };
 
 D3D11_INPUT_ELEMENT_DESC layout[] =
 {
 	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 };
 UINT numElements = ARRAYSIZE(layout);
 
@@ -157,7 +159,7 @@ bool InitializeDirect3d11App(HINSTANCE hInstance)
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
 	// Set the feature level to DirectX 11. Set NULL to use the highest features available
-	D3D_FEATURE_LEVEL featureLevels[] = 
+	D3D_FEATURE_LEVEL featureLevels[] =
 	{
 		D3D_FEATURE_LEVEL_11_0,
 		D3D_FEATURE_LEVEL_10_1,
@@ -220,9 +222,9 @@ bool InitScene()
 	//Create the vertex buffer
 	Vertex v[] =
 	{
-		Vertex(0.0f, 0.5f, 0.5f),
-		Vertex(0.5f, -0.5f, 0.5f),
-		Vertex(-0.5f, -0.5f, 0.5f),
+		Vertex(0.0f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f),
+		Vertex(0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f),
+		Vertex(-0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f),
 	};
 
 	D3D11_BUFFER_DESC vertexBufferDesc = { 0 };
