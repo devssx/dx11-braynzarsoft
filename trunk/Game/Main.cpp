@@ -18,6 +18,9 @@ ID3D10Blob* VS_Buffer;
 ID3D10Blob* PS_Buffer;
 ID3D11InputLayout* vertLayout;
 
+ID3D11DepthStencilView* depthStencilView;
+ID3D11Texture2D* depthStencilBuffer;
+
 LPCTSTR WndClassName = L"DX11Game";			//Define our window class name
 HWND hwnd = NULL;							//Sets our windows handle to NULL
 
@@ -185,9 +188,27 @@ bool InitializeDirect3d11App(HINSTANCE hInstance)
 	BackBuffer->Release();
 
 
-	//Set our Render Target
-	d3d11DevCon->OMSetRenderTargets(1, &renderTargetView, NULL);
+	//Describe our Depth/Stencil Buffer
+	D3D11_TEXTURE2D_DESC depthStencilDesc;
 
+	depthStencilDesc.Width = Width;
+	depthStencilDesc.Height = Height;
+	depthStencilDesc.MipLevels = 1;
+	depthStencilDesc.ArraySize = 1;
+	depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthStencilDesc.SampleDesc.Count = 1;
+	depthStencilDesc.SampleDesc.Quality = 0;
+	depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
+	depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	depthStencilDesc.CPUAccessFlags = 0;
+	depthStencilDesc.MiscFlags = 0;
+
+	//Create the Depth/Stencil View
+	d3d11Device->CreateTexture2D(&depthStencilDesc, NULL, &depthStencilBuffer);
+	d3d11Device->CreateDepthStencilView(depthStencilBuffer, NULL, &depthStencilView);
+
+	//Set our Render Target
+	d3d11DevCon->OMSetRenderTargets(1, &renderTargetView, depthStencilView);
 	return true;
 }
 
@@ -205,6 +226,9 @@ void ReleaseObjects()
 	vertLayout->Release();
 	squareVertBuffer->Release();
 	squareIndexBuffer->Release();
+
+	depthStencilView->Release();
+	depthStencilBuffer->Release();
 }
 
 bool InitScene()
@@ -239,7 +263,7 @@ bool InitScene()
 		Vertex(0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f),
 	};
 
-	DWORD indices[] = 
+	DWORD indices[] =
 	{
 		0, 1, 2,
 		0, 2, 3,
@@ -260,7 +284,7 @@ bool InitScene()
 	d3d11DevCon->IASetIndexBuffer(squareIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
 	D3D11_BUFFER_DESC vertexBufferDesc = { 0 };
-		
+
 	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 	vertexBufferDesc.ByteWidth = sizeof(Vertex) * 4;
 	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
@@ -291,6 +315,8 @@ bool InitScene()
 	viewport.TopLeftY = 0;
 	viewport.Width = Width;
 	viewport.Height = Height;
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
 
 	//Set the Viewport
 	d3d11DevCon->RSSetViewports(1, &viewport);
@@ -305,6 +331,9 @@ void DrawScene()
 {
 	float bgColor[4] = { (0.0f, 0.0f, 0.0f, 0.0f) };
 	d3d11DevCon->ClearRenderTargetView(renderTargetView, bgColor);
+
+	//Refresh the Depth/Stencil view
+	d3d11DevCon->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	d3d11DevCon->DrawIndexed(6, 0, 0);
 
