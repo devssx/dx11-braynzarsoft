@@ -1,3 +1,8 @@
+cbuffer cbPerObject
+{
+	float4x4 WVP;
+};
+
 //struct VS output PS input
 struct POSCOLOR
 {
@@ -9,7 +14,7 @@ POSCOLOR VS(float4 inPos : POSITION, float4 inColor : COLOR)
 {
 	POSCOLOR output;
 
-	output.Pos = inPos;
+	output.Pos = mul(inPos, WVP);
 	output.Color = inColor;
 
 	return output;

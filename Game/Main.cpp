@@ -21,6 +21,16 @@ ID3D11InputLayout* vertLayout;
 ID3D11DepthStencilView* depthStencilView;
 ID3D11Texture2D* depthStencilBuffer;
 
+ID3D11Buffer* cbPerObjectBuffer;
+XMMATRIX WVP;
+XMMATRIX World;
+XMMATRIX camView;
+XMMATRIX camProjection;
+
+XMVECTOR camPosition;
+XMVECTOR camTarget;
+XMVECTOR camUp;
+
 LPCTSTR WndClassName = L"DX11Game";			//Define our window class name
 HWND hwnd = NULL;							//Sets our windows handle to NULL
 
@@ -49,6 +59,14 @@ int messageloop();
 
 //Windows callback procedure
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+//Create effects constant buffer's structure
+struct cbPerObject
+{
+	XMMATRIX  WVP;
+};
+
+cbPerObject cbPerObj;
 
 
 //DX11 methods
@@ -229,6 +247,8 @@ void ReleaseObjects()
 
 	depthStencilView->Release();
 	depthStencilBuffer->Release();
+
+	cbPerObjectBuffer->Release();
 }
 
 bool InitScene()
@@ -320,6 +340,30 @@ bool InitScene()
 
 	//Set the Viewport
 	d3d11DevCon->RSSetViewports(1, &viewport);
+
+	
+	//Create the buffer to send to the cbuffer in effect file
+	D3D11_BUFFER_DESC cbbd = { 0 };
+
+	cbbd.Usage = D3D11_USAGE_DEFAULT;
+	cbbd.ByteWidth = sizeof(cbPerObject);
+	cbbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	cbbd.CPUAccessFlags = 0;
+	cbbd.MiscFlags = 0;
+
+	hr = d3d11Device->CreateBuffer(&cbbd, NULL, &cbPerObjectBuffer);
+
+	//Camera information
+	camPosition = XMVectorSet(0.0f, 0.0f, -0.9f, 0.0f);
+	camTarget = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+	camUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+	//Set the View matrix
+	camView = XMMatrixLookAtLH(camPosition, camTarget, camUp);
+
+	//Set the Projection matrix
+	camProjection = XMMatrixPerspectiveFovLH(0.4f*3.14f, (float)Width / Height, 1.0f, 1000.0f);
+
 	return true;
 }
 
@@ -335,8 +379,14 @@ void DrawScene()
 	//Refresh the Depth/Stencil view
 	d3d11DevCon->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	d3d11DevCon->DrawIndexed(6, 0, 0);
+	World = XMMatrixIdentity();
+	WVP = World * camView * camProjection;
+	cbPerObj.WVP = XMMatrixTranspose(WVP);
 
+	d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
+	d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
+
+	d3d11DevCon->DrawIndexed(6, 0, 0);
 	SwapChain->Present(0, 0);
 }
 
