@@ -39,6 +39,8 @@ XMMATRIX Scale;
 XMMATRIX Translation;
 float rot = 0.01f;
 
+ID3D11RasterizerState* WireFrame;
+
 LPCTSTR WndClassName = L"DX11Game";			//Define our window class name
 HWND hwnd = NULL;							//Sets our windows handle to NULL
 
@@ -257,6 +259,7 @@ void ReleaseObjects()
 	depthStencilBuffer->Release();
 
 	cbPerObjectBuffer->Release();
+	WireFrame->Release();
 }
 
 bool InitScene()
@@ -397,6 +400,13 @@ bool InitScene()
 	//Set the Projection matrix
 	camProjection = XMMatrixPerspectiveFovLH(0.4f*3.14f, (float)Width / Height, 1.0f, 1000.0f);
 
+
+	D3D11_RASTERIZER_DESC wfdesc;
+	ZeroMemory(&wfdesc, sizeof(D3D11_RASTERIZER_DESC));
+	wfdesc.FillMode = D3D11_FILL_WIREFRAME;
+	wfdesc.CullMode = D3D11_CULL_NONE;
+	hr = d3d11Device->CreateRasterizerState(&wfdesc, &WireFrame);
+
 	return true;
 }
 
@@ -442,6 +452,7 @@ void DrawScene()
 	cbPerObj.WVP = XMMatrixTranspose(WVP);
 	d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
 	d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
+	d3d11DevCon->RSSetState(WireFrame);
 
 	//Draw the first cube
 	d3d11DevCon->DrawIndexed(36, 0, 0);
@@ -450,6 +461,7 @@ void DrawScene()
 	cbPerObj.WVP = XMMatrixTranspose(WVP);
 	d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
 	d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
+	d3d11DevCon->RSSetState(NULL);
 
 	//Draw the second cube
 	d3d11DevCon->DrawIndexed(36, 0, 0);
