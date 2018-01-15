@@ -31,6 +31,14 @@ XMVECTOR camPosition;
 XMVECTOR camTarget;
 XMVECTOR camUp;
 
+XMMATRIX cube1World;
+XMMATRIX cube2World;
+
+XMMATRIX Rotation;
+XMMATRIX Scale;
+XMMATRIX Translation;
+float rot = 0.01f;
+
 LPCTSTR WndClassName = L"DX11Game";			//Define our window class name
 HWND hwnd = NULL;							//Sets our windows handle to NULL
 
@@ -277,22 +285,47 @@ bool InitScene()
 	//Create the vertex buffer
 	Vertex v[] =
 	{
-		Vertex(-0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f),
-		Vertex(-0.5f,  0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f),
-		Vertex(0.5f,  0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f),
-		Vertex(0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f),
+		Vertex(-1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f),
+		Vertex(-1.0f, +1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f),
+		Vertex(+1.0f, +1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f),
+		Vertex(+1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 1.0f),
+		Vertex(-1.0f, -1.0f, +1.0f, 0.0f, 1.0f, 1.0f, 1.0f),
+		Vertex(-1.0f, +1.0f, +1.0f, 1.0f, 1.0f, 1.0f, 1.0f),
+		Vertex(+1.0f, +1.0f, +1.0f, 1.0f, 0.0f, 1.0f, 1.0f),
+		Vertex(+1.0f, -1.0f, +1.0f, 1.0f, 0.0f, 0.0f, 1.0f),
 	};
 
-	DWORD indices[] =
-	{
+	DWORD indices[] = {
+		// front face
 		0, 1, 2,
 		0, 2, 3,
+
+		// back face
+		4, 6, 5,
+		4, 7, 6,
+
+		// left face
+		4, 5, 1,
+		4, 1, 0,
+
+		// right face
+		3, 2, 6,
+		3, 6, 7,
+
+		// top face
+		1, 5, 6,
+		1, 6, 2,
+
+		// bottom face
+		4, 0, 3,
+		4, 3, 7
 	};
+
 
 	D3D11_BUFFER_DESC indexBufferDesc = { 0 };
 
 	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	indexBufferDesc.ByteWidth = sizeof(DWORD) * 2 * 3;
+	indexBufferDesc.ByteWidth = sizeof(DWORD) * 12 * 3;
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	indexBufferDesc.CPUAccessFlags = 0;
 	indexBufferDesc.MiscFlags = 0;
@@ -306,7 +339,7 @@ bool InitScene()
 	D3D11_BUFFER_DESC vertexBufferDesc = { 0 };
 
 	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	vertexBufferDesc.ByteWidth = sizeof(Vertex) * 4;
+	vertexBufferDesc.ByteWidth = sizeof(Vertex) * 8;
 	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	vertexBufferDesc.CPUAccessFlags = 0;
 	vertexBufferDesc.MiscFlags = 0;
@@ -341,7 +374,7 @@ bool InitScene()
 	//Set the Viewport
 	d3d11DevCon->RSSetViewports(1, &viewport);
 
-	
+
 	//Create the buffer to send to the cbuffer in effect file
 	D3D11_BUFFER_DESC cbbd = { 0 };
 
@@ -354,7 +387,7 @@ bool InitScene()
 	hr = d3d11Device->CreateBuffer(&cbbd, NULL, &cbPerObjectBuffer);
 
 	//Camera information
-	camPosition = XMVectorSet(0.0f, 0.0f, -0.9f, 0.0f);
+	camPosition = XMVectorSet(0.0f, 3.0f, -8.0f, 0.0f);
 	camTarget = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
 	camUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
@@ -369,6 +402,31 @@ bool InitScene()
 
 void UpdateScene()
 {
+	//Keep the cubes rotating
+	rot += .0005f;
+	if (rot > 6.28f)
+		rot = 0.0f;
+
+	//Reset cube1World
+	cube1World = XMMatrixIdentity();
+
+	//Define cube1's world space matrix
+	XMVECTOR rotaxis = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	Rotation = XMMatrixRotationAxis(rotaxis, rot);
+	Translation = XMMatrixTranslation(0.0f, 0.0f, 4.0f);
+
+	//Set cube1's world space using the transformations
+	cube1World = Translation * Rotation;
+
+	//Reset cube2World
+	cube2World = XMMatrixIdentity();
+
+	//Define cube2's world space matrix
+	Rotation = XMMatrixRotationAxis(rotaxis, -rot);
+	Scale = XMMatrixScaling(1.3f, 1.3f, 1.3f);
+
+	//Set cube2's world space matrix
+	cube2World = Rotation * Scale;
 }
 
 void DrawScene()
@@ -379,14 +437,23 @@ void DrawScene()
 	//Refresh the Depth/Stencil view
 	d3d11DevCon->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	World = XMMatrixIdentity();
-	WVP = World * camView * camProjection;
+	//Set the WVP matrix and send it to the constant buffer in effect file
+	WVP = cube1World * camView * camProjection;
 	cbPerObj.WVP = XMMatrixTranspose(WVP);
-
 	d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
 	d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
 
-	d3d11DevCon->DrawIndexed(6, 0, 0);
+	//Draw the first cube
+	d3d11DevCon->DrawIndexed(36, 0, 0);
+
+	WVP = cube2World * camView * camProjection;
+	cbPerObj.WVP = XMMatrixTranspose(WVP);
+	d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
+	d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
+
+	//Draw the second cube
+	d3d11DevCon->DrawIndexed(36, 0, 0);
+
 	SwapChain->Present(0, 0);
 }
 
