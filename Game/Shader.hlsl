@@ -25,5 +25,7 @@ POSCOLOR VS(float4 inPos : POSITION, float2 inTexCoord : TEXCOORD)
 
 float4 PS(POSCOLOR input) : SV_TARGET
 {
-	return ObjTexture.Sample(ObjSamplerState, input.TexCoord);
+	float4 diffuse = ObjTexture.Sample(ObjSamplerState, input.TexCoord);
+	clip(diffuse.a - 0.25);
+	return diffuse;
 }
