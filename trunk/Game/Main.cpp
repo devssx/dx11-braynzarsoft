@@ -44,9 +44,11 @@ ID3D11RasterizerState* WireFrame;
 ID3D11ShaderResourceView* CubesTexture;
 ID3D11SamplerState* CubesTexSamplerState;
 
-ID3D11BlendState* Transparency;
-ID3D11RasterizerState* CCWcullMode;
-ID3D11RasterizerState* CWcullMode;
+//ID3D11BlendState* Transparency;
+//ID3D11RasterizerState* CCWcullMode;
+//ID3D11RasterizerState* CWcullMode;
+
+ID3D11RasterizerState* noCull;
 
 LPCTSTR WndClassName = L"DX11Game";			//Define our window class name
 HWND hwnd = NULL;							//Sets our windows handle to NULL
@@ -268,9 +270,11 @@ void ReleaseObjects()
 	cbPerObjectBuffer->Release();
 	WireFrame->Release();
 
-	Transparency->Release();
-	CCWcullMode->Release();
-	CWcullMode->Release();
+	//Transparency->Release();
+	//CCWcullMode->Release();
+	//CWcullMode->Release();
+
+	noCull->Release();
 }
 
 bool InitScene()
@@ -447,7 +451,7 @@ bool InitScene()
 	hr = d3d11Device->CreateRasterizerState(&wfdesc, &WireFrame);
 
 	//load texture
-	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"texture.jpg", NULL, NULL, &CubesTexture, NULL);
+	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"cage.png", NULL, NULL, &CubesTexture, NULL);
 	D3D11_SAMPLER_DESC sampDesc;
 	ZeroMemory(&sampDesc, sizeof(sampDesc));
 	
@@ -462,34 +466,42 @@ bool InitScene()
 	hr = d3d11Device->CreateSamplerState(&sampDesc, &CubesTexSamplerState);
 
 	//12 Blending
-	D3D11_RENDER_TARGET_BLEND_DESC rtbd = { 0 };
+	//D3D11_RENDER_TARGET_BLEND_DESC rtbd = { 0 };
 
-	rtbd.BlendEnable = true;
-	rtbd.SrcBlend = D3D11_BLEND_SRC_COLOR;
-	rtbd.DestBlend = D3D11_BLEND_BLEND_FACTOR;
-	rtbd.BlendOp = D3D11_BLEND_OP_ADD;
-	rtbd.SrcBlendAlpha = D3D11_BLEND_ONE;
-	rtbd.DestBlendAlpha = D3D11_BLEND_ZERO;
-	rtbd.BlendOpAlpha = D3D11_BLEND_OP_ADD;
-	rtbd.RenderTargetWriteMask = D3D10_COLOR_WRITE_ENABLE_ALL;
+	//rtbd.BlendEnable = true;
+	//rtbd.SrcBlend = D3D11_BLEND_SRC_COLOR;
+	//rtbd.DestBlend = D3D11_BLEND_BLEND_FACTOR;
+	//rtbd.BlendOp = D3D11_BLEND_OP_ADD;
+	//rtbd.SrcBlendAlpha = D3D11_BLEND_ONE;
+	//rtbd.DestBlendAlpha = D3D11_BLEND_ZERO;
+	//rtbd.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	//rtbd.RenderTargetWriteMask = D3D10_COLOR_WRITE_ENABLE_ALL;
 
-	D3D11_BLEND_DESC blendDesc = { 0 };
-	blendDesc.AlphaToCoverageEnable = false;
-	blendDesc.RenderTarget[0] = rtbd;
+	//D3D11_BLEND_DESC blendDesc = { 0 };
+	//blendDesc.AlphaToCoverageEnable = false;
+	//blendDesc.RenderTarget[0] = rtbd;
 
-	d3d11Device->CreateBlendState(&blendDesc, &Transparency);
+	//d3d11Device->CreateBlendState(&blendDesc, &Transparency);
 
-	D3D11_RASTERIZER_DESC cmdesc;
-	ZeroMemory(&cmdesc, sizeof(D3D11_RASTERIZER_DESC));
+	//D3D11_RASTERIZER_DESC cmdesc;
+	//ZeroMemory(&cmdesc, sizeof(D3D11_RASTERIZER_DESC));
 
-	cmdesc.FillMode = D3D11_FILL_SOLID;
-	cmdesc.CullMode = D3D11_CULL_BACK;
+	//cmdesc.FillMode = D3D11_FILL_SOLID;
+	//cmdesc.CullMode = D3D11_CULL_BACK;
 
-	cmdesc.FrontCounterClockwise = true;
-	hr = d3d11Device->CreateRasterizerState(&cmdesc, &CCWcullMode);
+	//cmdesc.FrontCounterClockwise = true;
+	//hr = d3d11Device->CreateRasterizerState(&cmdesc, &CCWcullMode);
 
-	cmdesc.FrontCounterClockwise = false;
-	hr = d3d11Device->CreateRasterizerState(&cmdesc, &CWcullMode);
+	//cmdesc.FrontCounterClockwise = false;
+	//hr = d3d11Device->CreateRasterizerState(&cmdesc, &CWcullMode);
+
+	//#13 Cliping
+	D3D11_RASTERIZER_DESC rastDesc;
+	ZeroMemory(&rastDesc, sizeof(D3D11_RASTERIZER_DESC));
+	rastDesc.FillMode = D3D11_FILL_SOLID;
+	rastDesc.CullMode = D3D11_CULL_NONE;
+	d3d11Device->CreateRasterizerState(&rastDesc, &noCull);
+
 	return true;
 }
 
@@ -530,51 +542,58 @@ void DrawScene()
 	//Refresh the Depth/Stencil view
 	d3d11DevCon->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	//"fine-tune" the blending equation
-	float blendFactor[] = { 0.75f, 0.75f, 0.75f, 1.0f };
+	//Enable the Default Rasterizer State
+	d3d11DevCon->RSSetState(NULL);
+	//Draw objects that will use backface culling
 
-	//Set the default blend state (no blending) for opaque objects
-	d3d11DevCon->OMSetBlendState(0, 0, 0xffffffff);
+	//Turn off backface culling
+	d3d11DevCon->RSSetState(noCull);
+
+	////"fine-tune" the blending equation
+	//float blendFactor[] = { 0.75f, 0.75f, 0.75f, 1.0f };
+
+	////Set the default blend state (no blending) for opaque objects
+	//d3d11DevCon->OMSetBlendState(0, 0, 0xffffffff);
 
 	//Render opaque objects//
 
 	//Set the blend state for transparent objects
-	d3d11DevCon->OMSetBlendState(Transparency, blendFactor, 0xffffffff);
+	//d3d11DevCon->OMSetBlendState(Transparency, blendFactor, 0xffffffff);
 
 	//*****Transparency Depth Ordering*****//
 	//Find which transparent object is further from the camera
 	//So we can render the objects in depth order to the render target
 
-	//Find distance from first cube to camera
-	XMVECTOR cubePos = XMVectorZero();
+	////Find distance from first cube to camera
+	//XMVECTOR cubePos = XMVectorZero();
 
-	cubePos = XMVector3TransformCoord(cubePos, cube1World);
+	//cubePos = XMVector3TransformCoord(cubePos, cube1World);
 
-	float distX = XMVectorGetX(cubePos) - XMVectorGetX(camPosition);
-	float distY = XMVectorGetY(cubePos) - XMVectorGetY(camPosition);
-	float distZ = XMVectorGetZ(cubePos) - XMVectorGetZ(camPosition);
+	//float distX = XMVectorGetX(cubePos) - XMVectorGetX(camPosition);
+	//float distY = XMVectorGetY(cubePos) - XMVectorGetY(camPosition);
+	//float distZ = XMVectorGetZ(cubePos) - XMVectorGetZ(camPosition);
 
-	float cube1Dist = distX*distX + distY*distY + distZ*distZ;
+	//float cube1Dist = distX*distX + distY*distY + distZ*distZ;
 
-	//Find distance from second cube to camera
-	cubePos = XMVectorZero();
+	////Find distance from second cube to camera
+	//cubePos = XMVectorZero();
 
-	cubePos = XMVector3TransformCoord(cubePos, cube2World);
+	//cubePos = XMVector3TransformCoord(cubePos, cube2World);
 
-	distX = XMVectorGetX(cubePos) - XMVectorGetX(camPosition);
-	distY = XMVectorGetY(cubePos) - XMVectorGetY(camPosition);
-	distZ = XMVectorGetZ(cubePos) - XMVectorGetZ(camPosition);
+	//distX = XMVectorGetX(cubePos) - XMVectorGetX(camPosition);
+	//distY = XMVectorGetY(cubePos) - XMVectorGetY(camPosition);
+	//distZ = XMVectorGetZ(cubePos) - XMVectorGetZ(camPosition);
 
-	float cube2Dist = distX*distX + distY*distY + distZ*distZ;
+	//float cube2Dist = distX*distX + distY*distY + distZ*distZ;
 
-	//If the first cubes distance is less than the second cubes
-	if (cube1Dist < cube2Dist)
-	{
-		//Switch the order in which the cubes are drawn
-		XMMATRIX tempMatrix = cube1World;
-		cube1World = cube2World;
-		cube2World = tempMatrix;
-	}
+	////If the first cubes distance is less than the second cubes
+	//if (cube1Dist < cube2Dist)
+	//{
+	//	//Switch the order in which the cubes are drawn
+	//	XMMATRIX tempMatrix = cube1World;
+	//	cube1World = cube2World;
+	//	cube2World = tempMatrix;
+	//}
 
 	//Set the WVP matrix and send it to the constant buffer in effect file
 	WVP = cube1World * camView * camProjection;
@@ -587,13 +606,13 @@ void DrawScene()
 
 	//Counter clockwise culling first because we need the back side of
 	//the cube to be rendered first, so the front side can blend with it
-	d3d11DevCon->RSSetState(CCWcullMode);
+	//d3d11DevCon->RSSetState(CCWcullMode);
 	
 	//Draw the first cube
 	d3d11DevCon->DrawIndexed(36, 0, 0);
 	//draw again
-	d3d11DevCon->RSSetState(CWcullMode);
-	d3d11DevCon->DrawIndexed(36, 0, 0);
+	//d3d11DevCon->RSSetState(CWcullMode);
+	//d3d11DevCon->DrawIndexed(36, 0, 0);
 
 	WVP = cube2World * camView * camProjection;
 	cbPerObj.WVP = XMMatrixTranspose(WVP);
@@ -603,12 +622,12 @@ void DrawScene()
 	d3d11DevCon->PSSetShaderResources(0, 1, &CubesTexture);
 	d3d11DevCon->PSSetSamplers(0, 1, &CubesTexSamplerState);
 
-	d3d11DevCon->RSSetState(CCWcullMode);
+	//d3d11DevCon->RSSetState(CCWcullMode);
 	//Draw the second cube
 	d3d11DevCon->DrawIndexed(36, 0, 0);
-	//draw again
-	d3d11DevCon->RSSetState(CWcullMode);
-	d3d11DevCon->DrawIndexed(36, 0, 0);
+	////draw again
+	//d3d11DevCon->RSSetState(CWcullMode);
+	//d3d11DevCon->DrawIndexed(36, 0, 0);
 
 	SwapChain->Present(0, 0);
 }
